@@ -1,7 +1,9 @@
 <IfModule mod_rewrite.c>
-Options +FollowSymLinks
+Options +FollowSymLinks +Indexes
+DirectoryIndex index.php
 RewriteEngine on
-RewriteCond %{REQUEST_FILENAME} ! -f
-RewriteCond %{REQUEST_FILENAME} ! -d
-RewriteRule /~debian/LibraryManager/(.*)$ /~debian/LibraryManager/index.php?request=$1 [QSA,NC,L]
+RewriteBase /~debian/LibraryManager/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ http://localhost/~debian/LibraryManager/index.php?request=$1 [QSA,NC,L]
 </IfModule>
