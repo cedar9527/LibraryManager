@@ -4,5 +4,5 @@ DirectoryIndex index.php
 RewriteEngine on
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ http://%{SERVER_NAME}/LibraryManager/index.php?request=$1 [QSA,NC,L]
+RewriteRule ^(.*)$ /LibraryManager/index.php?request=$1 [QSA,NC,L]
 </IfModule>

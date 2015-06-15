@@ -1,6 +1,7 @@
 <?php
 
 namespace api;
+use Exception;
 
 /**
  * HTTP request parser.
@@ -52,26 +53,35 @@ class RequestParser {
 		return $cleanInputs;
 	}
 	
-	/**
-	 * @brief Initializes an ApiParser
-	 * @param string $request the HTTP request provided by the web server
-	 */
-	public function __construct($request) {
-		$this->_args = explode('.', rtrim($request, '/'));
-		$this->_controller = array_shift($this->_args);
-		
-		$this->_verb = $_SERVER['HTTP_METHOD'];
-		
+	private function _manageVerb() {
+		$this->_verb = $_SERVER[HttpHeaders::CURRENT_METHOD];
 		if($this->_isSpecialVerb()) {
 			$this->_checkSpecialVerb();
-			$this->_verb = $_SERVER['HTTP_X_HTTP_METHOD'];
+			$this->_verb = $_SERVER[HttpHeaders::SPECIAL_METHOD];
 		}
 		
 		$this->_argsFromVerb();
 	}
 	
 	/**
-	 * @brief Gets the HTTP verb
+	 * Initializes an ApiParser
+	 * @param string $request the HTTP request provided by the web server
+	 */
+	public function __construct($request) {
+		if(is_null($request)) {
+			$this->_args = array();
+			$this->_controller = 'index';
+		} else {
+			$this->_args = explode('.', rtrim($request, '/'));
+			$this->_controller = array_shift($this->_args);
+			
+		}
+		
+		$this->_manageVerb();
+	}
+	
+	/**
+	 * Gets the HTTP verb
 	 * @return string
 	 */
 	public function getVerb() {
@@ -79,7 +89,7 @@ class RequestParser {
 	}
 	
 	/**
-	 * @brief Gets the controller called
+	 * Gets the called controller
 	 * @return string 
 	 */
 	public function getController() {
@@ -87,7 +97,7 @@ class RequestParser {
 	}
 	
 	/**
-	 * @brief Gets the arguments (URI fragments from the web server provided HTTP request)
+	 * Gets the arguments (URI fragments from the web server provided HTTP request)
 	 * @return string
 	 */
 	public function getArgs() {
@@ -95,8 +105,8 @@ class RequestParser {
 	}
 	
 	/**
-	 * @bried Gets the HTTP headers to set
-     * @return associative array
+	 * Gets the HTTP headers to set
+     * @return array an associative array with the request's headers
      */
     public function getHeaders() {
         return $this->_headers;
