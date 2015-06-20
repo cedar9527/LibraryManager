@@ -10,15 +10,15 @@ spl_autoload_register(function($class) {
 
 use api\HttpHeaders;
 use api\RequestParser;
-use controller\RequestHandler;
+use controller\Dispatcher;
 
 if (!filter_has_var(INPUT_SERVER, HttpHeaders::ORIGIN)) {
     $_SERVER[HttpHeaders::ORIGIN] = filter_input(INPUT_SERVER, HttpHeaders::SERVER_NAME);
 }
 
-$request = filter_input(INPUT_GET, "request");
-$parser = new RequestParser($request);
+$rawRequest = filter_input(INPUT_GET, 'request');
+$parser = new RequestParser($rawRequest);
 
-$handler = new RequestHandler();
-
-$handler->handle($parser);
+$request = $parser->getRequest();
+$handler = new Dispatcher();
+$handler->handle($request);

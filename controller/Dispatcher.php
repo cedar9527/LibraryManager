@@ -2,14 +2,14 @@
 
 namespace controller;
 
-use api\RequestParser;
+use api\Request;
 use OutOfRangeException;
 
 /**
  * Class to handle Requests with registered controllers.
  * Note: this class implements the Command Pattern.
  * */
-class RequestHandler {
+class Dispatcher {
 
     private $_parser = null;
     private $_controllers = array();
@@ -26,16 +26,14 @@ class RequestHandler {
 
     /**
      * Parses a request
-     * @param RequestParser $requestParser the parsed request to handle
+     * @param Request $request the parsed request to handle
      * */
-    function handle(RequestParser $requestParser) {
-        $this->_parser = $requestParser;
-        $controller = $this->_parser->getController();
-
-        if (array_key_exists($controller, $this->_controllers)) {
-            $this->_controllers[$controller]->execute();
+    function handle(Request $request) {
+        $resource = $request->getResource();
+        if (array_key_exists($resource, $this->_controllers)) {
+            $this->_controllers[$resource]->execute();
         } else {
-            throw new OutOfRangeException("Le controlleur {$controller} n'existe pas.");
+            throw new OutOfRangeException("Le controlleur pour la resource {$resource} n'existe pas.");
         }
     }
 
