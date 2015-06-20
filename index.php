@@ -21,4 +21,7 @@ $parser = new RequestParser($rawRequest);
 
 $request = $parser->getRequest();
 $handler = new Dispatcher();
+
+// TODO: Add & Register Controllers here
+
 $handler->handle($request);
