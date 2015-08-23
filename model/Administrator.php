@@ -15,28 +15,35 @@ class Administrator implements SplSubject {
 	private $_login;
 	private $_password;
 	private $_email;
-	private $_authenticated;
 	private $_pdoProvider;
 	private $_observers;
-	private $_hashProvider;
 
 	/**
 	 * Initialize an instance
 	 *
-	 * @param $backendManager IBackendManager
+	 * @param $pdoProvider IPdoDbProvider
 	 * @param $nom string
 	 * @param $login string
-	 * @param $msp string
+	 * @param $mdp string The hashed password
 	 * @param $email string
 	 */
-	public function __constructor(IPdoDbProvider $pdoProvider, $nom, $login, $mdp, $email) {
+	public function __construct(IPdoDbProvider $pdoProvider, $nom, $login, $mdp, $email) {
 		$this->_pdoProvider = $pdoProvider;
+		$this->_hashProvider = $hashProvider;
 		$this->_name = $nom;
 		$this->_login = $login;
 		$this->_password = $mdp;
 		$this->_email = $email;
-		$this->_authenticated = false;
 		$this->_observers = new SplObjectStorage();
+	}
+
+	public function __construct(IPdoDbProvider $pdoProvider, $login) {
+		$params = array(
+			"login" => array( "value"=>$login, "type"=> PDO::PARAM_STRING )
+		);
+		$statement = $this->_pdoProvider->query('get_admin_byLogin', $params);
+		$result = $statement->fetch(PDO::FETCH_ASSOC);
+		$this->_load($result);
 	}
 
 	/**
@@ -59,6 +66,13 @@ class Administrator implements SplSubject {
 	public function getPassword() {
 		return $this->_password;
 	}
+	/**
+	 * Sets the password.
+	 * @param $newPassword string
+	 */
+	public function setPassword($newPassword) {
+		$this->_password = $newPassword;
+	}
 
 	/**
 	 * @return string the email.
@@ -66,64 +80,33 @@ class Administrator implements SplSubject {
 	public function getEmail() {
 		return $this->_email;
 	}
-
 	/**
-	 * @return boolean true if this administrator is authenticated, false otherwise.
+	 * Sets the email.
+	 * @param $newEmail string
 	 */
-	public function isAuthenticated() {
-		return $this->_authenticated;
+	public function setEmail($newEmail) {
+		$this->_email = $newEmail;
 	}
 
-	/**
-	 * Authenticate this administrator.
-	 * @return boolean true if authentication was successfull false otherwise.
-	 */
-	public function connect() {
-		$checkedHash = $this->_hashProvider->hash($this->_password);
-		$params = array(
-			"id" => array("value" => $this->_id, "type" => PDO::PARAM_INT)
-		);
-		$passwordHashStatement = $this->_pdoProvider->query('get_admin_passwordHash', $params);
-		$row = $passwordHashStatement->fetch(PDO::FETCH_ASSOC);
-
-		if($row !== false && $row["hash"] == $checkedHash) {
-				$this->_online = true;
-		}
-		return $this->_online;
-	}
 
 	/**
 	 * Save this administrator in database.
 	 */
 	public function save() {
-		$params = array(
-			"id" => array( "value" => $this->_id, "type" => PDO::PARAM_INT)
-		);
-		$adminStatement = $this->_dbProvider->query('get_admin', $params);
-		$admin = $adminStatement->fetch(PDO::FETCH_ASSOC):
-
-		if($admin !== false) {
+		if($this->_id != undefined) {
 			$params = array(
-				"id" => array( "value" => $this->_id, "type" => PDO::PARAM_INT)
+				"id" => array( "value" => $this->_id, "type" => PDO::PARAM_INT),
+				"email" => array("value" => $this->_email, "type" => PDO::PARAM_STR),
+				"mdp" => array("value"> $this->_password, "type" => PDO::PARAM_STR)
 			);
-
-			if($this->_email != $admin["email"]) {
-				$params["email"] = array("value" => $this->_email, "type" => PDO::PARAM_STR);
-			} else {
-				$hash = $this->_hashProvider->hash($this->_password);
-				if($hash != $admin["mdp"]) {
-					$params["mdp"] = array("value" => $hash, "type" => PDO::PARAM_STR);
-				}
-			}
 
 			$this->_dbProvider->exec('update_admin', $params);
 		} else {
-			$hash = $this->_hashProvider->hash($this->_password);
 			$params = array(
-				"id" => array( "value" => $this->_id, "type" => PDO::PARAM_STR | PDO_PARAM_INPUT_OUTPUT),
+				"id" => array( "value" => $this->_id, "type" => PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT),
 				"nom" => array( "value" => $this->_name, "type" => PDO::PARAM_STR),
 				"login" => array( "value" => $this->_login, "type" => PDO::PARAM_STR),
-				"mdp" => array( "value" => $hash, "type" => PDO::PARAM_STR),
+				"mdp" => array( "value" => $this->_password, "type" => PDO::PARAM_STR),
 				"email" => array( "value" => $this->_email, "type" => PDO::PARAM_STR)
 			);
 			$createRowCount = $this->_dbProvider->exec('create_admin', $params);
@@ -163,4 +146,15 @@ class Administrator implements SplSubject {
 		}
 	}
 
+	/**
+	 * Loads a hash record into current instance.
+	 * @param $record array a hash with the following keys: nom, login, mdp, email
+	 */
+	private _load(array $record) {
+				$this->_name = $record["nom"];
+				$this->_login = $record["login"];
+				$this->_password = $record["mdp"];
+				$this->_email = $record["email"];
+		}
+	}
 }
