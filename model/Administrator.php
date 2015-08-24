@@ -21,13 +21,13 @@ class Administrator implements SplSubject {
 	/**
 	 * Initialize an instance
 	 *
-	 * @param $pdoProvider IPdoDbProvider
+	 * @param $pdoProvider IPdoProvider
 	 * @param $nom string
 	 * @param $login string
 	 * @param $mdp string The hashed password
 	 * @param $email string
 	 */
-	public function __construct(IPdoDbProvider $pdoProvider, $nom, $login, $mdp, $email) {
+	public function __construct(IPdoProvider $pdoProvider, $nom, $login, $mdp, $email) {
 		$this->_pdoProvider = $pdoProvider;
 		$this->_hashProvider = $hashProvider;
 		$this->_name = $nom;
@@ -37,7 +37,7 @@ class Administrator implements SplSubject {
 		$this->_observers = new SplObjectStorage();
 	}
 
-	public function __construct(IPdoDbProvider $pdoProvider, $login) {
+	public function __construct(IPdoProvider $pdoProvider, $login) {
 		$params = array(
 			"login" => array( "value"=>$login, "type"=> PDO::PARAM_STRING )
 		);
@@ -68,10 +68,11 @@ class Administrator implements SplSubject {
 	}
 	/**
 	 * Sets the password.
-	 * @param $newPassword string
+	 * @param $newPassword string the new hashed password
 	 */
 	public function setPassword($newPassword) {
 		$this->_password = $newPassword;
+		$this->notify();
 	}
 
 	/**
@@ -86,6 +87,7 @@ class Administrator implements SplSubject {
 	 */
 	public function setEmail($newEmail) {
 		$this->_email = $newEmail;
+		$this->notify();
 	}
 
 
@@ -97,7 +99,7 @@ class Administrator implements SplSubject {
 			$params = array(
 				"id" => array( "value" => $this->_id, "type" => PDO::PARAM_INT),
 				"email" => array("value" => $this->_email, "type" => PDO::PARAM_STR),
-				"mdp" => array("value"> $this->_password, "type" => PDO::PARAM_STR)
+		"mdp" => array("value"> $this->_password, "type" => PDO::PARAM_STR)
 			);
 
 			$this->_dbProvider->exec('update_admin', $params);

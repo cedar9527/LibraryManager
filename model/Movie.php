@@ -21,7 +21,7 @@ public class Movie implements SplSubject {
  * @param $description string
  * @param $content string
  */
-  public function __constructor(IPdoDbProvider $pdoProvider, $title, $author, $year,
+  public function __constructor(IPdoProvider $pdoProvider, $title, $author, $year,
     $description, $content) {
 
     $this->$_pdoProvider = $pdoProvider;
@@ -32,6 +32,72 @@ public class Movie implements SplSubject {
     $this->_content = $content;
     $this->_observers = new SplObjectStorage();
   }
+
+/**
+ * Gets the id.
+ * @return int
+ */
+public function getId() {
+  return $this->_id;
+}
+/**
+ * Gets the title.
+ * @return string
+ */
+public function getTitle(){
+  return $this->_title;
+}
+/**
+ * Gets the author.
+ * @return string
+ */
+public function getAuthor() {
+  return $this->_author;
+}
+/**
+ * Gets the year.
+ * @return int
+ */
+public function getYear() {
+  return $this->_year;
+}
+/**
+ * Gets the description.
+ * @return string
+ */
+public function getDescription() {
+  return $this->_description;
+}
+/**
+ * Sets the description.
+ * @param $newDescription string
+ */
+public function setDescription($newDescription) {
+  $this->_description = $newDescription;
+  $this->notify();
+}
+/**
+ * Gets the content.
+ * @return string
+ */
+public function getContent() {
+  return $this->_content;
+}
+/**
+ * Sets the content.
+ * @param $newContent string
+ */
+public function setContent($newContent) {
+  $this->_content = $newContent;
+  $this->notify();
+}
+/**
+ * Gets the Observers.
+ * @return SplObjectStorage
+ */
+public function getObservers() {
+  return $this->_observers;
+}
 
 /**
  * Extracts a movie from an hash with the following keys: titre, realisateur,
@@ -53,7 +119,7 @@ public class Movie implements SplSubject {
    * @param $batchCnt int the maximum number of Movies to retrieve
    * @see \utils\db\RecordsCollection
    */
-  public function getBatch($batchCnt) {
+  public function retrieveBatch($batchCnt) {
     $recordsCollection = new RecordsCollection();
     $movies = $recordsCollection->getBatch($this->_pdoProvider, 'get_movies_batch',
       array(__CLASS__, 'extract'), $batchCnt

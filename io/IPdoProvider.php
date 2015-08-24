@@ -1,5 +1,9 @@
 <?php
-interface IPdoDbProvider {
+/**
+ * Interface to wrap PDO db access.
+ * Implementors should take care of provider related details such as parameter bindings.
+ */
+interface IPdoProvider {
   /**
    * Executes a modification query.
    * @param $procedure string

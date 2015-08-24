@@ -1,6 +1,9 @@
 <?php
 namespace io;
-class MySqlDbProvider implements IPdoDbProvider {
+/**
+ * Mysql Provider.
+ */
+class MySqlProvider implements IPdoProvider {
   private $_host;
   private $_dbName;
   private $_user;
