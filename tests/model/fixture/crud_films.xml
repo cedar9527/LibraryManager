@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<dataset>
+    <Films annee='2003' contenu='contenuA' description="Leo, un gangster fait chanter Kevin, Sam et Rob pour qu'ils accomplissent un casse de plusieurs millions." realisateur='William Phillips' titre='Foolproof'></Films>
+    <Films annee='2005' contenu='contenuB' description="Comment un homme seul peut-il changer le monde ? Telle est la question qui hante Bruce Wayne depuis cette nuit tragique où ses parents furent abattus sous ses yeux. Il décide de fuir Gotham City pour un long et discret voyage à travers le monde... " realisateur='Christopher Nolan' titre='Batman Begins'></Films>
+    <Films annee='2012' contenu='contenuC' description="The african-american pilots of Tuskegee have mastered the skies with ease but have not been granted the opportunity to truly spread their wings during World War II, mistakenly deemed inferior and assigned only second-rate planes and missions. Until now. Given a mission so dangerous that all others have refused it, he pilots join the fiery aerial fray with something to prove and everything to lose. This is coming from LucasFilm, so you can expect great fx in the aerial battles but wooden acting and clunky plotting ..." realisateur='Anthony Hemingway' titre='Red Tails'></Films>
+</dataset>

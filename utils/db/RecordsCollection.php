@@ -1,4 +1,5 @@
 <?php
+namespace utils\db;
 class RecordsCollection {
   private $_retrievedCount = 0;
 

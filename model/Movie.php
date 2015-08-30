@@ -1,189 +1,201 @@
 <?php
+
 namespace model;
-use \utils\db;
-use \io;
-public class Movie implements SplSubject {
-  private $_id;
-  private $_title;
-  private $_author;
-  private $_year;
-  private $_description;
-  private $_content;
-  private $_observers;
-  private $_pdoProvider;
 
-/**
- * Initializes an instance.
- * @param $dbProvider IDbProvider
- * @param $title string
- * @param $author string
- * @param $year int
- * @param $description string
- * @param $content string
- */
-  public function __constructor(IPdoProvider $pdoProvider, $title, $author, $year,
-    $description, $content) {
+use io\IPdoProvider;
+use PDO;
+use RecordsCollection;
+use SplObjectStorage;
+use SplObserver;
+use SplSubject;
 
-    $this->$_pdoProvider = $pdoProvider;
-    $this->_title = $title;
-    $this->_author = $author;
-    $this->_year = $year;
-    $this->_description = $description;
-    $this->_content = $content;
-    $this->_observers = new SplObjectStorage();
-  }
+class Movie implements SplSubject {
 
-/**
- * Gets the id.
- * @return int
- */
-public function getId() {
-  return $this->_id;
-}
-/**
- * Gets the title.
- * @return string
- */
-public function getTitle(){
-  return $this->_title;
-}
-/**
- * Gets the author.
- * @return string
- */
-public function getAuthor() {
-  return $this->_author;
-}
-/**
- * Gets the year.
- * @return int
- */
-public function getYear() {
-  return $this->_year;
-}
-/**
- * Gets the description.
- * @return string
- */
-public function getDescription() {
-  return $this->_description;
-}
-/**
- * Sets the description.
- * @param $newDescription string
- */
-public function setDescription($newDescription) {
-  $this->_description = $newDescription;
-  $this->notify();
-}
-/**
- * Gets the content.
- * @return string
- */
-public function getContent() {
-  return $this->_content;
-}
-/**
- * Sets the content.
- * @param $newContent string
- */
-public function setContent($newContent) {
-  $this->_content = $newContent;
-  $this->notify();
-}
-/**
- * Gets the Observers.
- * @return SplObjectStorage
- */
-public function getObservers() {
-  return $this->_observers;
-}
+    private $_id;
+    private $_title;
+    private $_author;
+    private $_year;
+    private $_description;
+    private $_content;
+    private $_observers;
+    private $_pdoProvider;
 
-/**
- * Extracts a movie from an hash with the following keys: titre, realisateur,
- *   annee, description, contenu
- * @param $record array an hash
- */
-  public static function extract(array $record) {
-    return new Movie($this->_pdoProvider,
-      $record["titre"],
-      $record["realisateur"],
-      $record["annee"],
-      $record["description"],
-      $record["contenu"]
-    );
-  }
+    /**
+     * Initializes an instance.
+     * @param $dbProvider IDbProvider
+     * @param $title string
+     * @param $author string
+     * @param $year int
+     * @param $description string
+     * @param $content string
+     */
+    public function __constructor(IPdoProvider $pdoProvider, $title, $author, $year, $description, $content) {
 
-  /**
-   * Returns a batch of at most $batchCnt Movies
-   * @param $batchCnt int the maximum number of Movies to retrieve
-   * @see \utils\db\RecordsCollection
-   */
-  public function retrieveBatch($batchCnt) {
-    $recordsCollection = new RecordsCollection();
-    $movies = $recordsCollection->getBatch($this->_pdoProvider, 'get_movies_batch',
-      array(__CLASS__, 'extract'), $batchCnt
-    );
-    return $movies;
-  }
-
-  /**
-	 * Save this movie in database.
-	 */
-	public function save() {
-		if($this->_id != undefined) {
-      $params = array(
-        "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT),
-        "titre" => array( "value" => $this->_title, "type" => PDO::PARAM_STR),
-  			"realisateur" => array( "value" => $this->_author, "type" => PDO::PARAM_STR),
-  			"annee" => array( "value" => $this->_year, "type" => PDO::PARAM_INT),
-        "description" => array( "value" => $this->_description, "type" => PDO::PARAM_STR),
-  			"contenu" => array( "value" => $this->_content, "type" => PDO::PARAM_LOB)
-  		);
-			$this->_pdoProvider->exec('update_film', $params);
-		} else {
-      $params = array(
-        "id" => array( "value" => 0, "type" => PDO::PARAM_STR|PDO::PARAM_INPUT_OUTPUT),
-  			"titre" => array( "value" => $this->_title, "type" => PDO::PARAM_STR),
-  			"realisateur" => array( "value" => $this->_author, "type" => PDO::PARAM_STR),
-  			"annee" => array( "value" => $this->_year, "type" => PDO::PARAM_INT),
-        "description" => array( "value" => $this->_description, "type" => PDO::PARAM_STR),
-  			"contenu" => array( "value" => $this->_content, "type" => PDO::PARAM_LOB)
-  		);
-			$this->_pdoProvider->exec('create_film', $params);
-		}
-	}
-
-	/**
-	 * Removes this movie from the database.
-	 */
-	public function delete() {
-		$params = array (
-			"id" => array("value" => $this->_id, "type" => PDO::PARAM_INT)
-		);
-		$this->_pdoProvider->exec('delete_film', $params);
-	}
-
-  /**
-   * Adds an observer to this subject.
-   * @param $observer SplObserver
-   */
-  public function attach(SplObserver $observer) {
-    $this->_observers->attach($observer);
-  }
-  /**
-   * Removes an observer from this subject.
-   * @param $observer SplObserver
-   */
-  public function removeObserver(SplObserver $observer) {
-      $this->_observers->detach($observer);
-  }
-  /**
-   * Notifies observers about a change.
-   */
-  public function notify() {
-    foreach($this->_observers as $observer) {
-      $observer->update($this);
+        $this->$_pdoProvider = $pdoProvider;
+        $this->_title = $title;
+        $this->_author = $author;
+        $this->_year = $year;
+        $this->_description = $description;
+        $this->_content = $content;
+        $this->_observers = new SplObjectStorage();
     }
-  }
+
+    /**
+     * Gets the id.
+     * @return int
+     */
+    public function getId() {
+        return $this->_id;
+    }
+
+    /**
+     * Gets the title.
+     * @return string
+     */
+    public function getTitle() {
+        return $this->_title;
+    }
+
+    /**
+     * Gets the author.
+     * @return string
+     */
+    public function getAuthor() {
+        return $this->_author;
+    }
+
+    /**
+     * Gets the year.
+     * @return int
+     */
+    public function getYear() {
+        return $this->_year;
+    }
+
+    /**
+     * Gets the description.
+     * @return string
+     */
+    public function getDescription() {
+        return $this->_description;
+    }
+
+    /**
+     * Sets the description.
+     * @param $newDescription string
+     */
+    public function setDescription($newDescription) {
+        $this->_description = $newDescription;
+        $this->notify();
+    }
+
+    /**
+     * Gets the content.
+     * @return string
+     */
+    public function getContent() {
+        return $this->_content;
+    }
+
+    /**
+     * Sets the content.
+     * @param $newContent string
+     */
+    public function setContent($newContent) {
+        $this->_content = $newContent;
+        $this->notify();
+    }
+
+    /**
+     * Gets the Observers.
+     * @return SplObjectStorage
+     */
+    public function getObservers() {
+        return $this->_observers;
+    }
+
+    /**
+     * Extracts a movie from an hash with the following keys: titre, realisateur,
+     *   annee, description, contenu
+     * @param $record array an hash
+     */
+    public static function extract(array $record) {
+        return new Movie($this->_pdoProvider, $record["titre"], $record["realisateur"], $record["annee"], $record["description"], $record["contenu"]
+        );
+    }
+
+    /**
+     * Returns a batch of at most $batchCnt Movies
+     * @param $batchCnt int the maximum number of Movies to retrieve
+     * @see utils\db\RecordsCollection
+     */
+    public function retrieveBatch($batchCnt) {
+        $recordsCollection = new RecordsCollection();
+        $movies = $recordsCollection->getBatch($this->_pdoProvider, 'get_movies_batch', array(__CLASS__, 'extract'), $batchCnt
+        );
+        return $movies;
+    }
+
+    /**
+     * Save this movie in database.
+     */
+    public function save() {
+        if ($this->_id != undefined) {
+            $params = array(
+                "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT),
+                "titre" => array("value" => $this->_title, "type" => PDO::PARAM_STR),
+                "realisateur" => array("value" => $this->_author, "type" => PDO::PARAM_STR),
+                "annee" => array("value" => $this->_year, "type" => PDO::PARAM_INT),
+                "description" => array("value" => $this->_description, "type" => PDO::PARAM_STR),
+                "contenu" => array("value" => $this->_content, "type" => PDO::PARAM_LOB)
+            );
+            $this->_pdoProvider->exec('update_film', $params);
+        } else {
+            $params = array(
+                "id" => array("value" => 0, "type" => PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT),
+                "titre" => array("value" => $this->_title, "type" => PDO::PARAM_STR),
+                "realisateur" => array("value" => $this->_author, "type" => PDO::PARAM_STR),
+                "annee" => array("value" => $this->_year, "type" => PDO::PARAM_INT),
+                "description" => array("value" => $this->_description, "type" => PDO::PARAM_STR),
+                "contenu" => array("value" => $this->_content, "type" => PDO::PARAM_LOB)
+            );
+            $this->_pdoProvider->exec('create_film', $params);
+        }
+    }
+
+    /**
+     * Removes this movie from the database.
+     */
+    public function delete() {
+        $params = array(
+            "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT)
+        );
+        $this->_pdoProvider->exec('delete_film', $params);
+    }
+
+    /**
+     * Adds an observer to this subject.
+     * @param $observer SplObserver
+     */
+    public function attach(SplObserver $observer) {
+        $this->_observers->attach($observer);
+    }
+
+    /**
+     * Removes an observer from this subject.
+     * @param $observer SplObserver
+     */
+    public function detach(SplObserver $observer) {
+        $this->_observers->detach($observer);
+    }
+
+    /**
+     * Notifies observers about a change.
+     */
+    public function notify() {
+        foreach ($this->_observers as $observer) {
+            $observer->update($this);
+        }
+    }
+
 }

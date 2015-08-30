@@ -1,4 +1,5 @@
 <?php
+namespace io;
 /**
  * Interface to wrap PDO db access.
  * Implementors should take care of provider related details such as parameter bindings.

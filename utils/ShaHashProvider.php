@@ -7,6 +7,6 @@ class ShaHashProvider implements IHashProvider {
    * @return string the hash
    */
   public function hash($data) {
-    return hash('sha256', $data)
+    return hash('sha256', $data);
   }
 }
