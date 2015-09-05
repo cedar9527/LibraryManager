@@ -1,16 +1,22 @@
 <?php
 
 namespace io;
+use PDO;
 
 /**
  * Mysql Provider.
  */
 class MySqlProvider implements IPdoProvider {
 
+    /** @var string */
     private $_host;
+    /** @var string */
     private $_dbName;
+    /** @var string */
     private $_user;
+    /** @var string */
     private $_password;
+    /** @var PDO */
     private $_pdo;
 
     /**

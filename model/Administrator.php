@@ -6,22 +6,38 @@ use io\IPdoProvider;
 use PDO;
 use SplObserver;
 use SplSubject;
+use SplObjectStorage;
+use OutOfBoundsException;
 
 /**
  * Administator model
  *
  * Simple storage class, indirectly handles db operations.
+ * @property-read string $name The name
+ * @property-read string $login The login
+ * @property-read array $observers The observers listenning for changes
+ * @property-read boolean $loaded True if this entity was found in db, false otherwise
+ * @property string $email The email
+ * @property string $password The hashed password
  * @see io\MySqlProvider
  */
 class Administrator implements SplSubject {
-
+    /** @var int */
     private $_id;
+    /** @var string */
     private $_name;
+    /** @var string */
     private $_login;
+    /** @var string */
     private $_password;
+    /** @var string */
     private $_email;
+    /** @var IPdoProvider */
     private $_pdoProvider;
+    /** @var SplObjectStorage */
     private $_observers;
+    /** @var boolean */
+    private $_loaded;
 
     /**
      * Initialize an instance
@@ -35,14 +51,16 @@ class Administrator implements SplSubject {
     public function __construct(IPdoProvider $pdoProvider, $login, $nom = NULL, $mdp = NULL, $email = NULL) {
         $this->_pdoProvider = $pdoProvider;
         $this->_login = $login;
+        $this->_observers = new SplObjectStorage();
         if ($nom == NULL) {
             $params = array(
                 "login" => array("value" => $login, "type" => PDO::PARAM_STRING)
             );
-
             $statement = $this->_pdoProvider->query('get_admin_byLogin', $params);
             $result = $statement->fetch(PDO::FETCH_ASSOC);
-            $this->_load($result);
+            if($result) {
+                $this->_load($result);
+            }
         } else {
             $this->_name = $nom;
             $this->_password = $mdp;
@@ -59,54 +77,41 @@ class Administrator implements SplSubject {
         $this->_login = $record["login"];
         $this->_password = $record["mdp"];
         $this->_email = $record["email"];
+        $this->_loaded = true;
     }
 
-    /**
-     * @return string the name
-     */
-    public function getName() {
-        return $this->_name;
+    public function __get($name) {
+        $props = array(
+            'name' => $this->_name,
+            'email' => $this->_email,
+            'login' => $this->_login,
+            'password' => $this->_password,
+            'observers' => $this->_observers,
+            'loaded' => $this->_loaded
+        );
+        $value = null;
+        if(array_key_exists($name, $props)) {
+            $value = $props[$name];
+        }
+        return $value;
     }
-
-    /**
-     * @return string the login
-     * */
-    public function getLogin() {
-        return $this->_login;
+    
+    public function __set($name, $value) {
+        $props = array(
+            'email' => $this->_email,
+            'password' => $this->_password
+        );
+        if(array_key_exists($name, $props)) {
+            $oldValue = $props[$name];
+            $props[$name] = $value;
+            $this->notify(array(
+                $name => [$oldValue, $value]
+            ));
+        } else {
+            throw new OutOfBoundsException($name. " is not a valid property (class " .__CLASS__. ")");
+        }
     }
-
-    /**
-     * @return string the password
-     */
-    public function getPassword() {
-        return $this->_password;
-    }
-
-    /**
-     * Sets the password.
-     * @param $newPassword string the new hashed password
-     */
-    public function setPassword($newPassword) {
-        $this->_password = $newPassword;
-        $this->notify();
-    }
-
-    /**
-     * @return string the email
-     */
-    public function getEmail() {
-        return $this->_email;
-    }
-
-    /**
-     * Sets the email.
-     * @param $newEmail string
-     */
-    public function setEmail($newEmail) {
-        $this->_email = $newEmail;
-        $this->notify();
-    }
-
+    
     /**
      * Save this administrator in database.
      * @return boolean true if it succeeded, false otherwise.
@@ -164,10 +169,11 @@ class Administrator implements SplSubject {
 
     /**
      * Notify Observers about a change.
+     * @param array $changedData an array in the form key => [oldValue, newValue]
      */
-    public function notify() {
+    public function notify(array $changedData = NULL) {
         foreach ($this->_observers as $observer) {
-            $observer->update($this);
+            $observer->update($this, $changedData);
         }
     }
 

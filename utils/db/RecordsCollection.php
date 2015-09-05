@@ -12,22 +12,23 @@ class RecordsCollection {
 	}
 	/**
 	 * Gets a batch of at most $batchCnt Entities (depending on the callback)
-   * @param $pdoProvider IPdoProvider
-   * @param $procedure string
-   * @param $load callable a method which takes a hash {col => value} and returns an Object
-   * @param batchCnt int
-   * @example:
-   * $recordsCollection = new RecordsCollection();
-   * $movies = null;
-   * // grab $pdoProvider from somewhere
-   * $batchCnt = 20;
-   * do {
-   *  $movies = $recordsCollection->getBatch($pdoProvider, 'get_movies_batch',
-   *     array('\utils\db\Movie', 'load'), $batchCnt
-   *  );
-   * doSomethingWithMovies($movies);
-   * } while(count($movies) > 0);
-   *
+         * @param $pdoProvider IPdoProvider
+         * @param $procedure string
+         * @param $load callable a method which takes a hash {col => value} and returns an Object
+         * @param batchCnt int
+         * @return mixed an array of $load's results
+         * @example:
+         * $recordsCollection = new RecordsCollection();
+         * $movies = null;
+         * // grab $pdoProvider from somewhere
+         * $batchCnt = 20;
+         * do {
+         *  $movies = $recordsCollection->getBatch($pdoProvider, 'get_movies_batch',
+         *     array('\utils\db\Movie', 'load'), $batchCnt
+         *  );
+         * doSomethingWithMovies($movies);
+         * } while(count($movies) > 0);
+         *
 	 */
 	public function getBatch(IPdoProvider $pdoProvider, $procedure, callable $load, $batchCnt) {
 		$params = array(

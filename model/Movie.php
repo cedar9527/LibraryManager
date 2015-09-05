@@ -8,112 +8,114 @@ use RecordsCollection;
 use SplObjectStorage;
 use SplObserver;
 use SplSubject;
+use OutOfBoundsException;
 
+/**
+ * Movie model.
+ * @property-read int $id The id
+ * @property-read string $title The title
+ * @property-read string $author The author
+ * @property-read int $year The year
+ * @property-read array $observers The observers listenning for change
+ * @property string $description The description
+ * @property string $content The content
+ */
 class Movie implements SplSubject {
-
+    /** @var int */
     private $_id;
+    /** @var string */
     private $_title;
+    /** @var string */
     private $_author;
+    /** @var int */
     private $_year;
+    /** @var string */
     private $_description;
+    /** @var string */
     private $_content;
+    /** @var SplObjectStorage */
     private $_observers;
+    /** @var IPdoProvider */
     private $_pdoProvider;
 
     /**
      * Initializes an instance.
-     * @param $dbProvider IDbProvider
-     * @param $title string
-     * @param $author string
-     * @param $year int
-     * @param $description string
-     * @param $content string
+     * @param $pdoProvider IPdoProvider
+     * @param int $id OPTIONAL
+     * @param $title string OPTIONAL
+     * @param $author string OPTIONAL
+     * @param $year int OPTIONAL
+     * @param $description string OPTIONAL
+     * @param $content string OPTIONAL
      */
-    public function __constructor(IPdoProvider $pdoProvider, $title, $author, $year, $description, $content) {
-
-        $this->$_pdoProvider = $pdoProvider;
-        $this->_title = $title;
-        $this->_author = $author;
-        $this->_year = $year;
-        $this->_description = $description;
-        $this->_content = $content;
+    public function __constructor(IPdoProvider $pdoProvider, $id, $title = NULL, $author = NULL, $year = NULL, $description = NULL, $content = NULL) {
+        $this->_pdoProvider = $pdoProvider;
         $this->_observers = new SplObjectStorage();
+        if(isset($title)) {
+            $this->_title = $title;
+            $this->_author = $author;
+            $this->_year = $year;
+            $this->_description = $description;
+            $this->_content = $content;
+        } else {
+            $params = array(
+                "id" => $id
+            );
+            $statement = $this->_pdoProvider->query('get_film', $params);
+            $result = $statement->fetch(PDO::FETCH_ASSOC);
+            if($result) {
+                $this->_grabMovie($result);
+            }
+        }
+        
     }
-
+    
     /**
-     * Gets the id.
-     * @return int
+     * Copies a db record into current instance
+     * @param array $record a hash with the following keys: titre, realisateur,
+     *   annee, description, contenu
+     * @see self::extract
      */
-    public function getId() {
-        return $this->_id;
+    private function _grabMovie(array $record) {
+        $movie = self::extract($result);
+        foreach($movie as $prop => $val){ 
+            $this->{$prop} = $val; 
+        }
     }
-
-    /**
-     * Gets the title.
-     * @return string
-     */
-    public function getTitle() {
-        return $this->_title;
+    
+    public function __get($name) {
+        $props = array(
+            'author' => $this->_author,
+            'content' => $this->_content,
+            'description' => $this->_description,
+            'id' => $this->_id,
+            'title' => $this->_title,
+            'year' => $this->_year,
+            'observers' => $this->_observers
+        );
+        $value = null;
+        if(array_key_exists($name, $props)) {
+            $value = $props[$name];
+        }
+        return $value;
     }
-
-    /**
-     * Gets the author.
-     * @return string
-     */
-    public function getAuthor() {
-        return $this->_author;
+    
+    public function __set($name, $value) {
+        $props = array(
+            'content' => $this->_content,
+            'description' => $this->_description
+        );
+        if(array_key_exists($name, $props)) {
+            $oldValue = $props[$name];
+            $props[$name] = $value;
+            $this->notify(array(
+                $name => [$oldValue, $value]
+            ));
+        } else {
+            throw new OutOfBoundsException($name. " is not a valid property (class " .__CLASS__. ")");
+        }
     }
-
-    /**
-     * Gets the year.
-     * @return int
-     */
-    public function getYear() {
-        return $this->_year;
-    }
-
-    /**
-     * Gets the description.
-     * @return string
-     */
-    public function getDescription() {
-        return $this->_description;
-    }
-
-    /**
-     * Sets the description.
-     * @param $newDescription string
-     */
-    public function setDescription($newDescription) {
-        $this->_description = $newDescription;
-        $this->notify();
-    }
-
-    /**
-     * Gets the content.
-     * @return string
-     */
-    public function getContent() {
-        return $this->_content;
-    }
-
-    /**
-     * Sets the content.
-     * @param $newContent string
-     */
-    public function setContent($newContent) {
-        $this->_content = $newContent;
-        $this->notify();
-    }
-
-    /**
-     * Gets the Observers.
-     * @return SplObjectStorage
-     */
-    public function getObservers() {
-        return $this->_observers;
-    }
-
+    
     /**
      * Extracts a movie from an hash with the following keys: titre, realisateur,
      *   annee, description, contenu
@@ -126,12 +128,17 @@ class Movie implements SplSubject {
 
     /**
      * Returns a batch of at most $batchCnt Movies
+     * @param IPdoProvider $pdoProvider The PDO Provider
      * @param $batchCnt int the maximum number of Movies to retrieve
      * @see utils\db\RecordsCollection
      */
-    public function retrieveBatch($batchCnt) {
+    public static function retrieveBatch(IPdoProvider $pdoProvider, $batchCnt) {
         $recordsCollection = new RecordsCollection();
-        $movies = $recordsCollection->getBatch($this->_pdoProvider, 'get_movies_batch', array(__CLASS__, 'extract'), $batchCnt
+        $movies = $recordsCollection->getBatch(
+                $pdoProvider, 
+                'get_movies_batch', 
+                array(__CLASS__, 'extract'),
+                $batchCnt
         );
         return $movies;
     }
@@ -140,26 +147,20 @@ class Movie implements SplSubject {
      * Save this movie in database.
      */
     public function save() {
+        $params = array(
+            "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT),
+            "titre" => array("value" => $this->_title, "type" => PDO::PARAM_STR),
+            "realisateur" => array("value" => $this->_author, "type" => PDO::PARAM_STR),
+            "annee" => array("value" => $this->_year, "type" => PDO::PARAM_INT),
+            "description" => array("value" => $this->_description, "type" => PDO::PARAM_STR),
+            "contenu" => array("value" => $this->_content, "type" => PDO::PARAM_LOB)
+        );
         if ($this->_id != undefined) {
-            $params = array(
-                "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT),
-                "titre" => array("value" => $this->_title, "type" => PDO::PARAM_STR),
-                "realisateur" => array("value" => $this->_author, "type" => PDO::PARAM_STR),
-                "annee" => array("value" => $this->_year, "type" => PDO::PARAM_INT),
-                "description" => array("value" => $this->_description, "type" => PDO::PARAM_STR),
-                "contenu" => array("value" => $this->_content, "type" => PDO::PARAM_LOB)
-            );
             $this->_pdoProvider->exec('update_film', $params);
         } else {
-            $params = array(
-                "id" => array("value" => 0, "type" => PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT),
-                "titre" => array("value" => $this->_title, "type" => PDO::PARAM_STR),
-                "realisateur" => array("value" => $this->_author, "type" => PDO::PARAM_STR),
-                "annee" => array("value" => $this->_year, "type" => PDO::PARAM_INT),
-                "description" => array("value" => $this->_description, "type" => PDO::PARAM_STR),
-                "contenu" => array("value" => $this->_content, "type" => PDO::PARAM_LOB)
-            );
+            $params["id"]["type"] = PDO::PARAM_INT | PDO::PARAM_INPUT_OUTPUT;
             $this->_pdoProvider->exec('create_film', $params);
+            $this->_id = $params['id'];
         }
     }
 
@@ -191,10 +192,11 @@ class Movie implements SplSubject {
 
     /**
      * Notifies observers about a change.
+     * @param array $changedData an array in the form key => [oldValue, newValue]
      */
-    public function notify() {
+    public function notify(array $changedData = NULL) {
         foreach ($this->_observers as $observer) {
-            $observer->update($this);
+            $observer->update($this, $changedData);
         }
     }
 
