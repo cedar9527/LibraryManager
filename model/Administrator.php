@@ -4,8 +4,6 @@ namespace model;
 
 use io\IPdoProvider;
 use PDO;
-use SplObserver;
-use SplSubject;
 use SplObjectStorage;
 use OutOfBoundsException;
 
@@ -15,13 +13,12 @@ use OutOfBoundsException;
  * Simple storage class, indirectly handles db operations.
  * @property-read string $name The name
  * @property-read string $login The login
- * @property-read array $observers The observers listenning for changes
  * @property-read boolean $loaded True if this entity was found in db, false otherwise
  * @property string $email The email
  * @property string $password The hashed password
  * @see io\MySqlProvider
  */
-class Administrator implements SplSubject {
+class Administrator {
     /** @var int */
     private $_id;
     /** @var string */
@@ -34,8 +31,6 @@ class Administrator implements SplSubject {
     private $_email;
     /** @var IPdoProvider */
     private $_pdoProvider;
-    /** @var SplObjectStorage */
-    private $_observers;
     /** @var boolean */
     private $_loaded;
 
@@ -51,7 +46,6 @@ class Administrator implements SplSubject {
     public function __construct(IPdoProvider $pdoProvider, $login, $nom = NULL, $mdp = NULL, $email = NULL) {
         $this->_pdoProvider = $pdoProvider;
         $this->_login = $login;
-        $this->_observers = new SplObjectStorage();
         if ($nom == NULL) {
             $params = array(
                 "login" => array("value" => $login, "type" => PDO::PARAM_STRING)
@@ -86,12 +80,13 @@ class Administrator implements SplSubject {
             'email' => $this->_email,
             'login' => $this->_login,
             'password' => $this->_password,
-            'observers' => $this->_observers,
             'loaded' => $this->_loaded
         );
         $value = null;
         if(array_key_exists($name, $props)) {
             $value = $props[$name];
+        } else {
+            throw new OutOfBoundsException($name. " is not a valid property (class " .__CLASS__. ")");
         }
         return $value;
     }
@@ -149,32 +144,6 @@ class Administrator implements SplSubject {
         );
         $rowCount = $this->_dbProvider->exec('delete_admin', $params);
         return $rowCount > 0;
-    }
-
-    /**
-     * Adds an IObserver to this observable.
-     * @param $observer SplObserver
-     */
-    public function attach(SplObserver $observer) {
-        $this->_observers->attach($observer);
-    }
-
-    /**
-     * Removes an IObserver from this observable.
-     * @param $observer SplObserver
-     */
-    public function detach(SplObserver $observer) {
-        $this->_observers->detach($observer);
-    }
-
-    /**
-     * Notify Observers about a change.
-     * @param array $changedData an array in the form key => [oldValue, newValue]
-     */
-    public function notify(array $changedData = NULL) {
-        foreach ($this->_observers as $observer) {
-            $observer->update($this, $changedData);
-        }
     }
 
 }

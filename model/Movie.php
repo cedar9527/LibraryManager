@@ -6,8 +6,6 @@ use io\IPdoProvider;
 use PDO;
 use RecordsCollection;
 use SplObjectStorage;
-use SplObserver;
-use SplSubject;
 use OutOfBoundsException;
 
 /**
@@ -16,11 +14,10 @@ use OutOfBoundsException;
  * @property-read string $title The title
  * @property-read string $author The author
  * @property-read int $year The year
- * @property-read array $observers The observers listenning for change
  * @property string $description The description
  * @property string $content The content
  */
-class Movie implements SplSubject {
+class Movie {
     /** @var int */
     private $_id;
     /** @var string */
@@ -33,8 +30,6 @@ class Movie implements SplSubject {
     private $_description;
     /** @var string */
     private $_content;
-    /** @var SplObjectStorage */
-    private $_observers;
     /** @var IPdoProvider */
     private $_pdoProvider;
 
@@ -50,7 +45,6 @@ class Movie implements SplSubject {
      */
     public function __constructor(IPdoProvider $pdoProvider, $id, $title = NULL, $author = NULL, $year = NULL, $description = NULL, $content = NULL) {
         $this->_pdoProvider = $pdoProvider;
-        $this->_observers = new SplObjectStorage();
         if(isset($title)) {
             $this->_title = $title;
             $this->_author = $author;
@@ -77,7 +71,7 @@ class Movie implements SplSubject {
      * @see self::extract
      */
     private function _grabMovie(array $record) {
-        $movie = self::extract($result);
+        $movie = self::extract($record);
         foreach($movie as $prop => $val){ 
             $this->{$prop} = $val; 
         }
@@ -90,12 +84,13 @@ class Movie implements SplSubject {
             'description' => $this->_description,
             'id' => $this->_id,
             'title' => $this->_title,
-            'year' => $this->_year,
-            'observers' => $this->_observers
+            'year' => $this->_year
         );
         $value = null;
         if(array_key_exists($name, $props)) {
             $value = $props[$name];
+        } else {
+            throw new OutOfBoundsException($name. " is not a valid property (class " .__CLASS__. ")");
         }
         return $value;
     }
@@ -173,31 +168,4 @@ class Movie implements SplSubject {
         );
         $this->_pdoProvider->exec('delete_film', $params);
     }
-
-    /**
-     * Adds an observer to this subject.
-     * @param $observer SplObserver
-     */
-    public function attach(SplObserver $observer) {
-        $this->_observers->attach($observer);
-    }
-
-    /**
-     * Removes an observer from this subject.
-     * @param $observer SplObserver
-     */
-    public function detach(SplObserver $observer) {
-        $this->_observers->detach($observer);
-    }
-
-    /**
-     * Notifies observers about a change.
-     * @param array $changedData an array in the form key => [oldValue, newValue]
-     */
-    public function notify(array $changedData = NULL) {
-        foreach ($this->_observers as $observer) {
-            $observer->update($this, $changedData);
-        }
-    }
-
 }

@@ -1,7 +1,6 @@
 <?php
 namespace controller;
 use model\Movie;
-use io\MySqlProvider;
 use utils\db\ConnectionManager;
 
 /**
@@ -39,9 +38,5 @@ class MovieController {
     public function delete($id) {
         $this->_movie = new Movie($this->_pdoProvider, $id);
         $this->_movie->delete();
-    }
-    
-    public function update() {
-        
     }
 }

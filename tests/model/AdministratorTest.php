@@ -7,9 +7,7 @@ namespace model;
  */
 class AdministratorTest extends \PHPUnit_Extensions_Database_TestCase {
 
-    /**
-     * @var Administrator
-     */
+    /** @var Administrator */
     protected $object;
 
     /**
@@ -50,39 +48,6 @@ class AdministratorTest extends \PHPUnit_Extensions_Database_TestCase {
         );
     }
 
-    /**
-     * @covers model\Administrator::attach
-     * @todo   Implement testAttach().
-     */
-    public function testAttach() {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-                'This test has not been implemented yet.'
-        );
-    }
-
-    /**
-     * @covers model\Administrator::detach
-     * @todo   Implement testDetach().
-     */
-    public function testDetach() {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-                'This test has not been implemented yet.'
-        );
-    }
-
-    /**
-     * @covers model\Administrator::notify
-     * @todo   Implement testNotify().
-     */
-    public function testNotify() {
-        // Remove the following lines when you implement this test.
-        $this->markTestIncomplete(
-                'This test has not been implemented yet.'
-        );
-    }
-    
     /**
      * Returns the connection for this test.
      * @return PHPUnit_Extensions_Database_DB_IDatabaseConnection The connection used

@@ -1,17 +1,14 @@
 ﻿<?php
 namespace controller;
 use model\Administrator;
-use io\MySqlProvider;
 use utils\ShaHashProvider;
 use utils\db\ConnectionManager;
 use RuntimeException;
-use SplObserver;
-use SplSubject;
 
 /**
  * Administrator Controller
  */
-class AdministratorController implements SplObserver {
+class AdministratorController {
         /** @var Administrator */
 	private $_admin;
         /** @var \io\IPdoProvider */
@@ -49,7 +46,6 @@ class AdministratorController implements SplObserver {
             if(!$this->_admin->loaded || !$this->_admin->password == $hashedPassword) {
                 throw new RuntimeException("Administrator " .$login. " not found or invalid password.");
             }
-            $this->_admin->attach($this);
 	}
         
         /**
@@ -60,15 +56,6 @@ class AdministratorController implements SplObserver {
         public function removeAccount($login, $password) {
             $this->login($login, $password);
             $this->_admin->delete();
-        }
-        
-        /**
-         * Notifies this observer about a change
-         * @param SplSubject $subject The subject of the change
-         * @param array $changedData the changed data in the form prop => [oldValue, newValue]
-         */
-        public function update(SplSubject $subject, array $changedData = NULL) {
-            
         }
 
 }
