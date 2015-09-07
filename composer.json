@@ -1,0 +1,15 @@
+{
+    "name": "vendor/library-manager",
+    "description": "Description of project LibraryManager.",
+    "authors": [
+        {
+            "name": "yves",
+            "email": "lalanne.yves@gmx.fr"
+        }
+    ],
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "4.7.7"
+    }
+    
+}

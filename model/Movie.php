@@ -1,12 +1,10 @@
 <?php
-
 namespace model;
-
 use io\IPdoProvider;
 use PDO;
 use RecordsCollection;
-use SplObjectStorage;
 use OutOfBoundsException;
+use RuntimeException;
 
 /**
  * Movie model.
@@ -14,8 +12,8 @@ use OutOfBoundsException;
  * @property-read string $title The title
  * @property-read string $author The author
  * @property-read int $year The year
- * @property string $description The description
- * @property string $content The content
+ * @property-read string $description The description
+ * @property-read string $content The content
  */
 class Movie {
     /** @var int */
@@ -35,46 +33,73 @@ class Movie {
 
     /**
      * Initializes an instance.
-     * @param $pdoProvider IPdoProvider
-     * @param int $id OPTIONAL
-     * @param $title string OPTIONAL
-     * @param $author string OPTIONAL
-     * @param $year int OPTIONAL
-     * @param $description string OPTIONAL
-     * @param $content string OPTIONAL
+     * 
+     * @param IPdoProvider $pdoProvider
+     * @param string $title OPTIONAL
+     * @param string $author OPTIONAL
+     * @param int $year OPTIONAL
+     * @param string $description OPTIONAL
+     * @param string $content OPTIONAL
      */
-    public function __constructor(IPdoProvider $pdoProvider, $id, $title = NULL, $author = NULL, $year = NULL, $description = NULL, $content = NULL) {
+    public function __construct(IPdoProvider $pdoProvider, string $title=NULL, string $author=NULL, int $year=NULL, string $description=NULL, string $content=NULL) {
         $this->_pdoProvider = $pdoProvider;
-        if(isset($title)) {
-            $this->_title = $title;
-            $this->_author = $author;
-            $this->_year = $year;
-            $this->_description = $description;
-            $this->_content = $content;
-        } else {
-            $params = array(
-                "id" => $id
-            );
-            $statement = $this->_pdoProvider->query('get_film', $params);
-            $result = $statement->fetch(PDO::FETCH_ASSOC);
-            if($result) {
-                $this->_grabMovie($result);
-            }
-        }
-        
+        $this->_title = $title;
+        $this->_author = $author;
+        $this->_year = $year;
+        $this->_description = $description;
+        $this->_content = $content;
     }
     
     /**
-     * Copies a db record into current instance
-     * @param array $record a hash with the following keys: titre, realisateur,
-     *   annee, description, contenu
-     * @see self::extract
+     * Loads current instance from database based on its id.
+     * @param int $id
+     * @throws RuntimeException In case we didn't find seeked Movie
      */
-    private function _grabMovie(array $record) {
-        $movie = self::extract($record);
-        foreach($movie as $prop => $val){ 
-            $this->{$prop} = $val; 
+    public function getFromId($id) {
+        $this->_id = $id;
+        $ok = $movie->_loadFromId();
+        if(!$ok) {
+            throw new RuntimeException("Unable to load " .__CLASS__. " { id: " .$id. " }. Movie not found, perhaps it's been deleted.");
         }
+        return $movie;
+    }
+    
+    /**
+     * Convenience method to get _loadFromId parameter's array
+     * @return array the 
+     */
+    private function _getLoadFromIdParams() {
+        return array(
+            "_id" => "id",
+            "_author" => "realisateur",
+            "_content" => "contenu",
+            "_description" => "description",
+            "_title" => "titre",
+            "_year" => "annee"  
+        );
+    }
+    
+    /**
+     * Gets a movie based on its id.
+     * @return boolean true if the movie was successfully loaded, false otherwise
+     */
+    private function _loadFromId() {
+        $ok = false;
+        $params = array(
+            "id" => $this->_id
+        );
+        $statement = $this->_pdoProvider->query('get_film', $params);
+        if(
+                $statement != NULL &&  
+                ($result = $statement->fetch(PDO::FETCH_ASSOC)) !== FALSE
+         ) {
+            $ok = true;
+            $props = $this->_getLoadFromIdParams();
+            foreach($props as $field => $column) {
+                $this->{$field} = $result[$column];
+            }
+        }
+        return $ok;
     }
     
     public function __get($name) {
@@ -97,17 +122,18 @@ class Movie {
     
     public function __set($name, $value) {
         $props = array(
-            'content' => $this->_content,
-            'description' => $this->_description
+            'author' => '_author',
+            'content' => '_content',
+            'description' => '_description',
+            'id' => '_id',
+            'title' => '_title',
+            'year' => '_year'
         );
+        
         if(array_key_exists($name, $props)) {
-            $oldValue = $props[$name];
-            $props[$name] = $value;
-            $this->notify(array(
-                $name => [$oldValue, $value]
-            ));
+            $this->{$props[$name]} = $value;
         } else {
-            throw new OutOfBoundsException($name. " is not a valid property (class " .__CLASS__. ")");
+            throw new OutOfBoundsException($name. " cannot be written in (class " .__CLASS__. ")");
         }
     }
     
@@ -115,9 +141,16 @@ class Movie {
      * Extracts a movie from an hash with the following keys: titre, realisateur,
      *   annee, description, contenu
      * @param $record array an hash
+     * @see Movie::retrieveBatch
      */
     public static function extract(array $record) {
-        return new Movie($this->_pdoProvider, $record["titre"], $record["realisateur"], $record["annee"], $record["description"], $record["contenu"]
+        return new Movie(
+                $this->_pdoProvider, 
+                $record["titre"], 
+                $record["realisateur"], 
+                $record["annee"], 
+                $record["description"], 
+                $record["contenu"]
         );
     }
 
@@ -139,9 +172,27 @@ class Movie {
     }
 
     /**
-     * Save this movie in database.
+     * Creates this movie in database.
      */
-    public function save() {
+    public function create() {
+        $params = array(
+            "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT | PDO::PARAM_INPUT_OUTPUT),
+            "titre" => array("value" => $this->_title, "type" => PDO::PARAM_STR),
+            "realisateur" => array("value" => $this->_author, "type" => PDO::PARAM_STR),
+            "annee" => array("value" => $this->_year, "type" => PDO::PARAM_INT),
+            "description" => array("value" => $this->_description, "type" => PDO::PARAM_STR),
+            "contenu" => array("value" => $this->_content, "type" => PDO::PARAM_LOB)
+        );
+        
+            $params["id"]["type"] = PDO::PARAM_INT ;
+            $this->_pdoProvider->exec('create_film', $params);
+            $this->_id = $params['id'];
+    }
+    
+    /**
+     * Updates this movie in database.
+     */
+    public function update() {
         $params = array(
             "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT),
             "titre" => array("value" => $this->_title, "type" => PDO::PARAM_STR),
@@ -150,13 +201,7 @@ class Movie {
             "description" => array("value" => $this->_description, "type" => PDO::PARAM_STR),
             "contenu" => array("value" => $this->_content, "type" => PDO::PARAM_LOB)
         );
-        if ($this->_id != undefined) {
-            $this->_pdoProvider->exec('update_film', $params);
-        } else {
-            $params["id"]["type"] = PDO::PARAM_INT | PDO::PARAM_INPUT_OUTPUT;
-            $this->_pdoProvider->exec('create_film', $params);
-            $this->_id = $params['id'];
-        }
+        $this->_pdoProvider->exec('update_film', $params);
     }
 
     /**

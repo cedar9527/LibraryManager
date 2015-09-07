@@ -1,19 +1,17 @@
 <?php
-
 namespace model;
-
 use io\IPdoProvider;
 use PDO;
-use SplObjectStorage;
 use OutOfBoundsException;
+use RuntimeException;
 
 /**
  * Administator model
  *
  * Simple storage class, indirectly handles db operations.
- * @property-read string $name The name
- * @property-read string $login The login
- * @property-read boolean $loaded True if this entity was found in db, false otherwise
+ * @property int $id The id
+ * @property string $name The name
+ * @property string $login The login
  * @property string $email The email
  * @property string $password The hashed password
  * @see io\MySqlProvider
@@ -31,56 +29,70 @@ class Administrator {
     private $_email;
     /** @var IPdoProvider */
     private $_pdoProvider;
-    /** @var boolean */
-    private $_loaded;
 
     /**
      * Initialize an instance
      *
      * @param $pdoProvider IPdoProvider
-     * @param $login string
-     * @param $nom string OPTIONAL
-     * @param $mdp string OPTIONAL The hashed password 
-     * @param $email string OPTIONAL
+     * @param string $login
+     * @param string $password The hashed password 
+     * @param string $name OPTIONAL
+     * @param string $email OPTIONAL
      */
-    public function __construct(IPdoProvider $pdoProvider, $login, $nom = NULL, $mdp = NULL, $email = NULL) {
+    public function __construct(IPdoProvider $pdoProvider, $login, $password, $name = NULL, $email = NULL) {
         $this->_pdoProvider = $pdoProvider;
         $this->_login = $login;
-        if ($nom == NULL) {
-            $params = array(
-                "login" => array("value" => $login, "type" => PDO::PARAM_STRING)
-            );
-            $statement = $this->_pdoProvider->query('get_admin_byLogin', $params);
-            $result = $statement->fetch(PDO::FETCH_ASSOC);
-            if($result) {
-                $this->_load($result);
-            }
-        } else {
-            $this->_name = $nom;
-            $this->_password = $mdp;
-            $this->_email = $email;
-        }
+        $this->_password = $password;
+        $this->_name = $name;
+        $this->_email = $email;
     }
 
     /**
-     * Loads a hash record into current instance.
-     * @param $record array a hash with the following keys: nom, login, mdp, email
+     * Gets an administrator by credentials.
+     *
+     * @return model\Administrator
+     * @throws RuntimeException In case we didn't find seeked administrator
      */
-    private function _load(array $record) {
-        $this->_name = $record["nom"];
-        $this->_login = $record["login"];
-        $this->_password = $record["mdp"];
-        $this->_email = $record["email"];
-        $this->_loaded = true;
+    public function getFromCredentials() {
+        $ok = $this->_loadFromLogin();
+        if(!$ok) {
+            throw new RuntimeException("Unable to load " .__CLASS__. " { login: " .$login. ", password: ".$password." }. Admin not found, check login and password.");
+        }
+        return $admin;
+    }
+
+    
+    /**
+     * Loads the administrator from database.
+     * @return boolean true if Administrator was successfully loaded, false otherwise
+     */
+    private function _loadFromLogin() {
+        $ok = false;
+        $params = array(
+            "login" => array("value" => $this->_login, "type" => PDO::PARAM_STR),
+            "mdp" => array( "value" => $this->_password, "type" => PDO::PARAM_STR )
+        );
+        $statement = $this->_pdoProvider->query('get_admin_byCredentials', $params);
+        
+        if(
+                $statement != NULL &&
+                ($result = $statement->fetch(PDO::FETCH_ASSOC)) !== FALSE
+        ) {
+            $ok = true;
+            $this->_name = $result["nom"];
+            $this->_email = $result["email"];
+            $this->_id = $result["id"];
+        }
+        return $ok;
     }
 
     public function __get($name) {
         $props = array(
+            'id' => $this->_id,
             'name' => $this->_name,
             'email' => $this->_email,
             'login' => $this->_login,
-            'password' => $this->_password,
-            'loaded' => $this->_loaded
+            'password' => $this->_password
         );
         $value = null;
         if(array_key_exists($name, $props)) {
@@ -93,44 +105,46 @@ class Administrator {
     
     public function __set($name, $value) {
         $props = array(
-            'email' => $this->_email,
-            'password' => $this->_password
+            'id' => '_id',
+            'name' => '_name',
+            'email' => '_email',
+            'login' => '_login',
+            'password' => '_password'
         );
         if(array_key_exists($name, $props)) {
-            $oldValue = $props[$name];
-            $props[$name] = $value;
-            $this->notify(array(
-                $name => [$oldValue, $value]
-            ));
+            $this->{$props[$name]} = $value;
         } else {
-            throw new OutOfBoundsException($name. " is not a valid property (class " .__CLASS__. ")");
+            throw new OutOfBoundsException($name. " cannot be written in (class " .__CLASS__. ")");
         }
     }
-    
     /**
-     * Save this administrator in database.
-     * @return boolean true if it succeeded, false otherwise.
+     * Creates this administrator in database.
+     * @return boolean true if it succeeded, false otherwise
      */
-    public function save() {
-        $affectedRowCount = 0;
-        if ($this->_id != undefined) {
-            $params = array(
-                "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT),
-                "email" => array("value" => $this->_email, "type" => PDO::PARAM_STR),
-                "mdp" => array("value" > $this->_password, "type" => PDO::PARAM_STR)
-            );
+    public function create() {
+        $params = array(
+            "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT | PDO::PARAM_INPUT_OUTPUT),
+            "nom" => array("value" => $this->_name, "type" => PDO::PARAM_STR),
+            "login" => array("value" => $this->_login, "type" => PDO::PARAM_STR),
+            "mdp" => array("value" => $this->_password, "type" => PDO::PARAM_STR),
+            "email" => array("value" => $this->_email, "type" => PDO::PARAM_STR)
+        );
+        $affectedRowCount = $this->_pdoProvider->exec('create_admin', $params);
+        return $affectedRowCount > 0;
+    }
 
-            $affectedRowCount = $this->_dbProvider->exec('update_admin', $params);
-        } else {
-            $params = array(
-                "id" => array("value" => $this->_id, "type" => PDO::PARAM_STR | PDO::PARAM_INPUT_OUTPUT),
-                "nom" => array("value" => $this->_name, "type" => PDO::PARAM_STR),
-                "login" => array("value" => $this->_login, "type" => PDO::PARAM_STR),
-                "mdp" => array("value" => $this->_password, "type" => PDO::PARAM_STR),
-                "email" => array("value" => $this->_email, "type" => PDO::PARAM_STR)
-            );
-            $affectedRowCount = $this->_dbProvider->exec('create_admin', $params);
-        }
+    /**
+     * Updates this administrator (email / password) in database.
+     * @return boolean true if it succeeded, false otherwise
+     */
+    public function update() {
+        $params = array(
+            "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT),
+            "email" => array("value" => $this->_email, "type" => PDO::PARAM_STR),
+            "mdp" => array("value" > $this->_password, "type" => PDO::PARAM_STR)
+        );
+        
+        $affectedRowCount = $this->_pdoProvider->exec('update_admin', $params);
         return $affectedRowCount > 0;
     }
 
@@ -142,7 +156,7 @@ class Administrator {
         $params = array(
             "id" => array("value" => $this->_id, "type" => PDO::PARAM_INT)
         );
-        $rowCount = $this->_dbProvider->exec('delete_admin', $params);
+        $rowCount = $this->_pdoProvider->exec('delete_admin', $params);
         return $rowCount > 0;
     }
 

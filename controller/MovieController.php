@@ -1,7 +1,6 @@
 <?php
 namespace controller;
 use model\Movie;
-use utils\db\ConnectionManager;
 
 /**
  * Movie Controller
@@ -10,16 +9,24 @@ use utils\db\ConnectionManager;
 class MovieController {
     /** @var Movie */
     private $_movie;
-    /** @var IPdoProvider */
-    private $_pdoProvider;
     
-    public function __construct() {
-        $this->_pdoProvider = ConnectionManager::getPdoProvider();
+    /**
+     * Initializes an instance.
+     * @param Movie $movie The movie this controller will operate upon
+     */
+    public function __construct(Movie $movie) {
+        $this->_movie = $movie;
     }
     
-    public function create($title, $author, $year, $description, $content) {
-        $this->_movie = new Movie($this->_pdoProvider, $title, $author, $year, $description, $content);
-        $this->_movie->save();
+    /**
+     * Creates or Updates this movie in database.
+     */
+    public function save() {
+        if(isset($this->_movie->id)) {
+            $this->_movie->update();
+        } else {
+            $this->_movie->create();
+        }
     }
     
     /**
@@ -33,10 +40,8 @@ class MovieController {
     
     /**
      * Removes a Movie.
-     * @param int $id The movie to delete's id
      */
-    public function delete($id) {
-        $this->_movie = new Movie($this->_pdoProvider, $id);
+    public function delete() {
         $this->_movie->delete();
     }
 }

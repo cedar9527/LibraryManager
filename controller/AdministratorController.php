@@ -2,7 +2,6 @@
 namespace controller;
 use model\Administrator;
 use utils\ShaHashProvider;
-use utils\db\ConnectionManager;
 use RuntimeException;
 
 /**
@@ -11,50 +10,47 @@ use RuntimeException;
 class AdministratorController {
         /** @var Administrator */
 	private $_admin;
-        /** @var \io\IPdoProvider */
-        private $_pdoProvider;
 	
-        public function __construct() {
-            $this->_pdoProvider = ConnectionManager::getPdoProvider();
+        /**
+         * Initializes an instance.
+         * @param Administrator $admin The administrator this controller will operate upon 
+         */
+        public function __construct(Administrator $admin) {
+            $this->_admin = $admin;
         }
         
         /**
-         * Stores a new Administrator in the db.
-         * @param type $login
-         * @param type $name
-         * @param type $password
-         * @param type $email
+         * Creates Or Updates a new Administrator in the db.
+         * @todo OPTIONAL Deals with email/password update case.
          */
-        public function create($login, $name, $password, $email) {
-            $hashProvider = new ShaHashProvider();
-            $hashedPassword = $hashProvider->hash($password);
-            $this->_admin = new Administrator($this->_pdoProvider, $login, $name, $hashedPassword, $email);
-            $this->_admin->save();
+        public function save() {
+            if(!isset($this->_admin->id)) {
+                if(!isset($this->_admin->login) || !isset($this->_admin->password)) {
+                    throw new RuntimeException("Login and password must be set in order to create an administrator.");
+                }
+               $this->_admin->create();
+            } else {
+                $this->_admin->update();
+            }
         }
         
         /**
          * Logs an Administrator in.
-         * @param string $login
-         * @param string $password
          * @throws RuntimeException when login was not found or password was incorrect.
          */
-	public function login($login, $password) {
-            $hashProvider = new ShaHashProvider();
-            $hashedPassword = $hashProvider->hash($password);
-            $this->_admin = new Administrator($this->_pdoProvider, $login);
+	public function login() {
+            $this->_admin->getFromCredentials();
             
-            if(!$this->_admin->loaded || !$this->_admin->password == $hashedPassword) {
-                throw new RuntimeException("Administrator " .$login. " not found or invalid password.");
+            if($this->_admin->password != $hashedPassword) {
+                throw new RuntimeException("Administrator " .$this->_admin->login. " not found or invalid password.");
             }
 	}
         
         /**
          * Removes an Administrator's account.
-         * @param string $login
-         * @param string $password
          */
-        public function removeAccount($login, $password) {
-            $this->login($login, $password);
+        public function removeAccount() {
+            $this->login();
             $this->_admin->delete();
         }
 
